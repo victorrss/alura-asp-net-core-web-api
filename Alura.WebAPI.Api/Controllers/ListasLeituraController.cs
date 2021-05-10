@@ -1,8 +1,10 @@
 ﻿using Alura.ListaLeitura.Modelos;
 using Alura.ListaLeitura.Persistencia;
+using Alura.WebAPI.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +15,9 @@ namespace Alura.ListaLeitura.Api.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class ListasLeituraController : ControllerBase
     {
         private readonly IRepository<Livro> _repo;
@@ -23,19 +27,13 @@ namespace Alura.ListaLeitura.Api.Controllers
             _repo = repository;
         }
 
-        private Lista CriaLista(TipoListaLeitura tipo)
-        {
-            return new Lista 
-            { 
-                Tipo = tipo.ParaString(),
-                Livros = _repo.All
-                    .Where(l => l.Lista == tipo)
-                    .Select(l => l.ToApi())
-                    .ToList()
-            };
-        }
-
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Recupera todas as listas de leitura",
+            Tags = new[] { "Listas" }
+        )]
+        [ProducesResponseType(200, Type = typeof(List<Lista>))]
+        [ProducesResponseType(500, Type = typeof(ErrorResponse))]
         public IActionResult TodasListas()
         {
             Lista paraLer = CriaLista(TipoListaLeitura.ParaLer);
@@ -46,10 +44,28 @@ namespace Alura.ListaLeitura.Api.Controllers
         }
 
         [HttpGet("{tipo}")]
-        public IActionResult Recuperar(TipoListaLeitura tipo)
+        [SwaggerOperation(
+            Summary = "Recupera a lista de leitura identificada por seu {tipo}.",
+            Tags = new[] { "Listas" }
+        )]
+        [ProducesResponseType(200, Type = typeof(Lista))]
+        [ProducesResponseType(500, Type = typeof(ErrorResponse))]
+        public IActionResult Recuperar([SwaggerParameter("Tipo da lista a ser obtida.")] TipoListaLeitura tipo)
         {
             var lista = CriaLista(tipo);
             return Ok(lista);
+        }
+
+        private Lista CriaLista(TipoListaLeitura tipo)
+        {
+            return new Lista
+            {
+                Tipo = tipo.ParaString(),
+                Livros = _repo.All
+                    .Where(l => l.Lista == tipo)
+                    .Select(l => l.ToApi())
+                    .ToList()
+            };
         }
     }
 }
